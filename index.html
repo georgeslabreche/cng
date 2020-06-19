@@ -11,6 +11,7 @@
     <script>
 
       // We assume that compound words make cool company names.
+      // Words taken from: https://www.learningdifferences.com/Main%20Page/Topics/Compound%20Word%20Lists/Compound_Word_%20Lists_complete.htm
       var compound_words = ["lifetime",
         "elsewhere",
         "upside",
@@ -859,34 +860,112 @@
         "forestall",
         "rainwater"];
 
-        function generate_name()
-        {
-          // Get some random words.
-          $.get( "https://random-word-api.herokuapp.com/word?number=10", function(random_words) {
+        $(document).ready(function(){
 
-            // Get a randome compound word from the list of compound words.
-            random_index = Math.floor(Math.random() * compound_words.length);
-            cword = compound_words[random_index];
+          /**
+           * A generated company name consists of: compound word + random word.
+           * Generate company name with random word from the wordnik API.
+           */
+          function generate_name_with_wordnik()
+          {
+            // API key taken from here:
+            // https://stackoverflow.com/questions/26622708/how-to-get-random-word-using-wordnik-api-in-javascript
+            $.get("http://api.wordnik.com/v4/words.json/randomWords?hasDictionaryDef=true&minCorpusCount=0&minLength=3&maxLength=15&limit=10&api_key=a2a73e7b926c924fad7001ca3111acd55af2ffabf50eb4ae5", function(random_words) {
 
+              // Get a randome compound word from the list of compound words.
+              var random_index = Math.floor(Math.random() * compound_words.length);
+              var cword = compound_words[random_index];
+
+              // Concatenate each word and see what happens.
+              $.each(random_words, function(index, rword) {
+                // Upper chase first character of each word.
+                cword = cword.charAt(0).toUpperCase() + cword.slice(1);
+                rword = rword.word.charAt(0).toUpperCase() + rword.word.slice(1);
+
+                // Display company names!
+                $( "#cname-list" ).append( "<span>" + cword + " " + rword + "</br>"  + rword + " " + cword + "</span></br></br>" );
+              });
+
+            }).fail(function() {
+              // This API has a limit on the number of requests allowed.
+              // In case a 429 Too Many Requests errors is return then fallback to the alternative API.
+              console.log("API request error, falling back to the other API.")
+              generate_name_with_random_word_api();
+            });
+          }
+
+          /**
+           * A generated company name consists of: compound word + random word.
+           * Generate copany name with a random word from a heroku hosted random word API.
+           */
+          function generate_name_with_random_word_api()
+          {
+            // Get some random words.
+            $.get("https://random-word-api.herokuapp.com/word?number=10", function(random_words) {
+
+              // Get a randome compound word from the list of compound words.
+              var random_index = Math.floor(Math.random() * compound_words.length);
+              var cword = compound_words[random_index];
+
+              // Concatenate each word and see what happens.
+              $.each(random_words, function(index, rword) {
+
+                // Upper chase first character of each word.
+                cword = cword.charAt(0).toUpperCase() + cword.slice(1);
+                rword = rword.charAt(0).toUpperCase() + rword.slice(1);
+
+                // Display company names!
+                $( "#cname-list" ).append( "<span>" + cword + " " + rword + "</br>"  + rword + " " + cword + "</span></br></br>" );
+              });
+            }).fail(function() {
+              // In case of error, don't fallback to the other API because we may trigger an error fallback loop.
+              // In this case just build company name from the pre-defined compound words.
+              console.log("API request error. Falling back to using predefined compound words only.")
+
+              // For this fallback we'll just build 1 pair of company names.
+              random_index_1 = Math.floor(Math.random() * compound_words.length);
+              cword_1 = compound_words[random_index_1];
+
+              random_index_2 = Math.floor(Math.random() * compound_words.length);
+              cword_2 = compound_words[random_index_2];
+
+              cword_1 = cword_1.charAt(0).toUpperCase() + cword_1.slice(1);
+              cword_2 = cword_2.charAt(0).toUpperCase() + cword_2.slice(1);
+
+              // Display company names!
+              $( "#cname-list" ).append( "<span>" + cword_1 + " " + cword_2 + "</br>"  + cword_2 + " " + cword_1 + "</span></br></br>" );
+            });
+          }
+
+          /**
+           * A generated company name consists of: compound word + random word.
+           * The compound workd is randomly picked from a pre-defined list.
+           * The random word is take from either one of two APIs.
+           */
+          function generate_name()
+          {
             // Clear old names
             $( "#cname-list" ).empty();
 
-            // Concatenate each word and see what happens.
-            $.each(random_words, function(index, rword) {
+            // Randomply pick which API should be used to fetch the random word.
+            // 1/3 chances to pick the API that tends to return weird words.
+            rand = Math.floor(Math.random() * 2);
 
-              // Upper chase first character of each word.
-              cword = cword.charAt(0).toUpperCase() + cword.slice(1);
-              rword = rword.charAt(0).toUpperCase() + rword.slice(1);
+            // Generate the company name
+            if(rand == 0)
+            {
+              generate_name_with_random_word_api();
+            }
+            else
+            {
+              generate_name_with_wordnik();
+            }
+          }
 
-              // Display company names!
-              $( "#cname-list" ).append( "<span>" + cword + " " + rword + "</br>"  + rword + " " + cword + "</span></br></br>" );
-            });
-          });
-        }
-
-        $(document).ready(function(){
+          // Initial list of generated company names.
           generate_name();
 
+          // Regenerate a new list of company names on button click.
           $("button").click(function() {
             generate_name();
           });
@@ -896,10 +975,13 @@
     </script>
   </head>
   <body>
+    <!-- Company name list container. -->
     <div id="cname-list">
-
     </div>
+
     <br>
+
+    <!-- Button to regenerate company names. -->
     <button>Try again</button>
   </body>
 </html>
